@@ -9,6 +9,8 @@ import org.mapstruct.Mapping;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
+import de.unibayreuth.se.taskboard.business.ports.UserService;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
@@ -17,36 +19,31 @@ import java.util.UUID;
 @ConditionalOnMissingBean // prevent IntelliJ warning about duplicate beans
 @NoArgsConstructor
 public abstract class TaskDtoMapper {
-    //TODO: Fix this mapper after resolving the other TODOs.
-
-//    @Autowired
-//    private UserService userService;
+    @Autowired
+    private UserService userService;
     @Autowired
     private UserDtoMapper userDtoMapper;
 
     protected boolean utcNowUpdated = false;
     protected LocalDateTime utcNow;
 
-    //@Mapping(target = "assignee", expression = "java(getUserById(source.getAssigneeId()))")
-    @Mapping(target = "assignee", ignore = true)
+    @Mapping(target = "assignee", expression = "java(getUserById(source.getAssigneeId()))")
     public abstract TaskDto fromBusiness(Task source);
 
-    //@Mapping(target = "assigneeId", source = "assignee.id")
-    @Mapping(target = "assigneeId", ignore = true)
+    @Mapping(target = "assigneeId", source = "assignee.id")
     @Mapping(target = "status", source = "status", defaultValue = "TODO")
     @Mapping(target = "createdAt", expression = "java(mapTimestamp(source.getCreatedAt()))")
     @Mapping(target = "updatedAt", expression = "java(mapTimestamp(source.getUpdatedAt()))")
     public abstract Task toBusiness(TaskDto source);
 
     protected UserDto getUserById(UUID userId) {
-//        if (userId == null) {
-//            return null;
-//        }
-//        return userService.getById(userId).map(userDtoMapper::fromBusiness).orElse(null);
-        return null;
+        if (userId == null) {
+            return null;
+        }
+        return userDtoMapper.fromBusiness(userService.getById(userId));
     }
 
-    protected LocalDateTime mapTimestamp (LocalDateTime timestamp) {
+    protected LocalDateTime mapTimestamp(LocalDateTime timestamp) {
         if (timestamp == null) {
             // ensure that createdAt and updatedAt use exactly the same timestamp
             if (!utcNowUpdated) {
@@ -60,4 +57,3 @@ public abstract class TaskDtoMapper {
         return timestamp;
     }
 }
-

@@ -1,6 +1,7 @@
 package de.unibayreuth.se.taskboard;
 
 import de.unibayreuth.se.taskboard.business.ports.TaskService;
+import de.unibayreuth.se.taskboard.business.ports.UserService;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,8 +39,8 @@ public abstract class AbstractSystemTest {
         registry.add("spring.datasource.password", postgres::getPassword);
     }
 
-    //@Autowired
-    //protected UserService userService;
+    @Autowired
+    protected UserService userService;
 
     @Autowired
     protected TaskService taskService;
@@ -51,6 +52,6 @@ public abstract class AbstractSystemTest {
     void setUp() {
         RestAssured.baseURI = "http://localhost:" + port;
         taskService.clear();
-        //userService.clear();
+        userService.clear();
     }
 }

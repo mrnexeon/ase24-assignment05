@@ -1,18 +1,22 @@
 package de.unibayreuth.se.taskboard;
 
 import de.unibayreuth.se.taskboard.api.dtos.TaskDto;
+import de.unibayreuth.se.taskboard.api.dtos.UserDto;
 import de.unibayreuth.se.taskboard.api.mapper.TaskDtoMapper;
 import de.unibayreuth.se.taskboard.business.domain.Task;
+import de.unibayreuth.se.taskboard.business.domain.User;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.equalTo;
 
 
 public class TaskBoardSystemTests extends AbstractSystemTest {
@@ -45,7 +49,7 @@ public class TaskBoardSystemTests extends AbstractSystemTest {
     @Test
     void createAndDeleteTask() {
         Task createdTask = taskService.create(
-                TestFixtures.getTasks().getFirst()
+                TestFixtures.getTasks().get(0)
         );
 
         when()
@@ -65,5 +69,78 @@ public class TaskBoardSystemTests extends AbstractSystemTest {
 
     }
 
-    //TODO: Add at least one test for each new endpoint in the users controller (the create endpoint can be tested as part of the other endpoints).
+    @Test
+    void getAllUsers() {
+        // Create users using TestFixtures
+        List<User> createdUsers = TestFixtures.createUsers(userService);
+
+        // Get all users and verify
+        given()
+            .contentType(ContentType.JSON)
+            .when()
+            .get("/api/users")
+            .then()
+            .statusCode(200)
+            .body(".", hasSize(createdUsers.size()))
+            .body("[0].name", org.hamcrest.Matchers.anyOf(
+                org.hamcrest.Matchers.equalTo("Alice"),
+                org.hamcrest.Matchers.equalTo("Bob"),
+                org.hamcrest.Matchers.equalTo("Charlie")))
+            .body("[1].name", org.hamcrest.Matchers.anyOf(
+                org.hamcrest.Matchers.equalTo("Alice"),
+                org.hamcrest.Matchers.equalTo("Bob"),
+                org.hamcrest.Matchers.equalTo("Charlie")));
+    }
+
+    @Test
+    void getUserById() {
+        // Create a user using TestFixtures
+        User user = userService.create(TestFixtures.getUsers().get(0));
+        
+        // Get the user by ID and verify
+        given()
+            .contentType(ContentType.JSON)
+            .when()
+            .get("/api/users/{id}", user.getId())
+            .then()
+            .statusCode(200)
+            .body("name", equalTo("Alice"));
+
+        // Try to get non-existent user
+        given()
+            .contentType(ContentType.JSON)
+            .when()
+            .get("/api/users/{id}", UUID.randomUUID())
+            .then()
+            .statusCode(400);
+    }
+
+    @Test
+    void createUser() {
+        // Get a test user from TestFixtures
+        User testUser = TestFixtures.getUsers().get(0);
+
+        // Create user and verify response
+        UserDto createdUser = given()
+            .contentType(ContentType.JSON)
+            .body(testUser)
+            .when()
+            .post("/api/users")
+            .then()
+            .statusCode(200)
+            .extract()
+            .as(UserDto.class);
+
+        assertThat(createdUser.getName()).isEqualTo(testUser.getName());
+        assertThat(createdUser.getId()).isNotNull();
+
+        // Verify user exists in the system
+        given()
+            .contentType(ContentType.JSON)
+            .when()
+            .get("/api/users/{id}", createdUser.getId())
+            .then()
+            .statusCode(200)
+            .body("name", equalTo(testUser.getName()));
+    }
 }
